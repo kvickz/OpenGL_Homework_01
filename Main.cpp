@@ -4,25 +4,27 @@
 #include <gl\glew.h>
 #include <SDL_opengl.h>
 
+#include "FileLoader.h"
+
 #include <math.h>
 
 //Shader sources
 const GLchar* vertexSource =
 "#version 150 core\n"
-"in vec2 position;"
-"in vec3 color;"
-"out vec3 Color;"
+"in vec3 position;"
+//"in vec3 color;"
+//"out vec3 Color;"
 "void main() {"
-"    Color = color;"
-"    gl_Position = vec4(position, 0.0, 1.0);"
+//"    Color = color;"
+"    gl_Position = vec4(position, 1.0);"
 "}";
 
 const GLchar* fragmentSource =
 "#version 150 core\n"
-"in vec3 Color;"
+//"in vec3 Color;"
 "out vec4 outColor;"
 "void main() {"
-"    outColor = vec4(Color, 1.0);"
+"    outColor = vec4(1.0, 0.6, 0.6, 1.0);"
 "}";
 
 int main(int argc, char* argv[])
@@ -45,34 +47,46 @@ int main(int argc, char* argv[])
     glewExperimental = GL_TRUE;
     glewInit();
     
-    /*
-    GLfloat vertices[] = {
-        -1.0f, 1.0f,
-        1.0f, -1.0f,
-        -1.0f, -1.0f,
-    };
-    */
-    
-    //With more colors  -X, Y, R, G, B
-    GLfloat vertices[] = {
-        -0.5f, 0.5f, 1.0f, 0.0f, 0.0f,       //topleft
-        0.5f, 0.5f, 0.0f, 1.0f, 0.0f,        //topright
-        0.5f, -0.5f, 0.0f, 0.0f, 1.0f,       //bottomright
-        -0.5f, -0.5f, 1.0f, 1.0f, 1.0f,      //bottomleft
-        -0.8f, 0.0f, 1.0f, 0.0f, 1.0f,       //mid left
+    //Load suzanne
+    ObjFile suzanneFile;
+    //suzanneFile.Load("suzanne.obj");
+    suzanneFile.Load("cube.obj");
 
+    //TODO: Refactor into the ObjFile class
+    //This seems janky, but it loads all of the coordinates into an array
+    auto vertCollection = suzanneFile.GetVertices();
+
+    unsigned int vertCollectionSize = (vertCollection.size() * 3);
+    GLfloat* pVertices;
+    pVertices = new GLfloat[vertCollectionSize];
+
+    for (unsigned int i = 0; i < vertCollection.size(); ++i)
+    {
+        unsigned int index = (i * 3);
+        pVertices[index] = vertCollection[i].x;
+        pVertices[index + 1] = vertCollection[i].y;
+        pVertices[index + 2] = vertCollection[i].z;
+    }
+
+    const float triangle[] =
+    {
+        // X    Y    Z
+        0.0f, 0.5f, 0.0f,
+        0.5f, -0.5f, 0.0f,
+        -0.5f, -0.5f, 0.0f,
     };
 
     //Creating Vertex Array Object
     GLuint vao;                 //Declare
-    glGenVertexArrays(1, &vao); //Create    
+    glGenVertexArrays(1, &vao); //Create
     glBindVertexArray(vao);     //Make active
 
     //Create Vertex Buffer Object
     GLuint vbo;                         //Memory managed by openGL so this works in place of a pointer
     glGenBuffers(1, &vbo);              //Creating Vertex Buffer Object
     glBindBuffer(GL_ARRAY_BUFFER, vbo); //Making the vbo the active array buffer
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);  //This copies the vertex data into the buffer
+    //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);  //This copies the vertex data into the buffer
+    glBufferData(GL_ARRAY_BUFFER, vertCollectionSize, pVertices, GL_STATIC_DRAW);  //This copies the vertex data into the buffer
     //  NOTE: This function doesn't refer to the ID of the VBO, but to the active array buffer
     //  The last parameter can be 
     //      -GL_STATIC_DRAW: Vertex data uploaded once and drawn many times (ex. the world)
@@ -81,6 +95,7 @@ int main(int argc, char* argv[])
     //  These determine where in memory the data will be stored at, stream will allow faster writing for slower drawing
     //  
 
+    /*
     //Element Buffer
     GLuint elements[] =
     {
@@ -90,12 +105,29 @@ int main(int argc, char* argv[])
         //2, 3, 4,
         //2, 3, 0,
     };
+    */
+
+    //Element Buffer
+    GLuint* elements;
+
+    auto faceCollection = suzanneFile.GetFaces();
+
+    unsigned int faceCollectionSize = (faceCollection.size() * 3);
+    elements = new GLuint[faceCollectionSize];
+
+    for (unsigned int i = 0; i < faceCollection.size(); ++i)
+    {
+        unsigned int index = (i * 3);
+        elements[index] = faceCollection[i].indexX;
+        elements[index + 1] = faceCollection[i].indexY;
+        elements[index + 2] = faceCollection[i].indexZ;
+    }
 
     //Same as creating a vertex buffer object
     GLuint ebo;
     glGenBuffers(1, &ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, faceCollectionSize, elements, GL_STATIC_DRAW);
 
     //Now we have to explain to the graphics card how to handle these attributes.
 
@@ -165,12 +197,15 @@ int main(int argc, char* argv[])
     //  Specify layout of the vertex data
     GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
     glEnableVertexAttribArray(posAttrib);
-    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), 0);
+    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+    //glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), 0);
 
+    /*
     GLint colAttrib = glGetAttribLocation(shaderProgram, "color");
     glEnableVertexAttribArray(colAttrib);
     glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(2 * sizeof(float)));
-    
+    */
+
     //specify how input is retrieved from the array
     
     //  -'2' in the function above is the number of values for that input
@@ -210,7 +245,8 @@ int main(int argc, char* argv[])
         
         //Draw!
         //glDrawArrays(GL_TRIANGLES, 0, 3);
-        glDrawElements(GL_TRIANGLES, ARRAYSIZE(elements), GL_UNSIGNED_INT, 0);
+        //glDrawElements(GL_TRIANGLES, ARRAYSIZE(elements), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, faceCollectionSize, GL_UNSIGNED_INT, 0);
 
         //Changing color attribute
         //GLfloat newFloat = sinf((float)uniColor + (SDL_GetTicks() * 0.005f)) * 0.5f + 0.5f;
@@ -222,6 +258,12 @@ int main(int argc, char* argv[])
 
 
     //Cleanup
+
+    delete elements;
+    elements = nullptr;
+    delete pVertices;
+    pVertices = nullptr;
+
     glDeleteProgram(shaderProgram);
     glDeleteShader(fragmentShader);
     glDeleteShader(vertexShader);

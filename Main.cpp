@@ -170,8 +170,8 @@ int main(int argc, char* argv[])
         glClearColor(0.25f, 0.25f, 0.25f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         
-        //Draw!
-        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+        //Draw
+        glDrawElements(GL_TRIANGLES, faceCollectionSize, GL_UNSIGNED_INT, 0);
         //glDrawElements(GL_TRIANGLES, faceCollectionSize, GL_UNSIGNED_INT, 0);
 
         SDL_GL_SwapWindow(pWindow);

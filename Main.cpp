@@ -6,11 +6,9 @@
 
 #include "FileLoader.h"
 
-#include <math.h>
-
 //Shader sources
 const GLchar* vertexSource =
-"#version 150 core\n"
+"#version 400\n"
 "in vec3 position;"
 //"in vec3 color;"
 //"out vec3 Color;"
@@ -20,11 +18,11 @@ const GLchar* vertexSource =
 "}";
 
 const GLchar* fragmentSource =
-"#version 150 core\n"
+"#version 400\n"
 //"in vec3 Color;"
 "out vec4 outColor;"
 "void main() {"
-"    outColor = vec4(1.0, 0.6, 0.6, 1.0);"
+"    outColor = vec4(0.6, 0.6, 0.6, 0.6);"
 "}";
 
 int main(int argc, char* argv[])
@@ -36,10 +34,10 @@ int main(int argc, char* argv[])
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 
-    SDL_Window* pWindow = SDL_CreateWindow("OpenGL Tut"
+    SDL_Window* pWindow = SDL_CreateWindow("OpenGL Homework"
                                            , -1200, 300
                                            , 800, 600
-                                           , SDL_WINDOW_OPENGL);
+                                           , SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
 
     SDL_GLContext context = SDL_GL_CreateContext(pWindow);
 
@@ -48,13 +46,12 @@ int main(int argc, char* argv[])
     glewInit();
     
     //Load suzanne
-    ObjFile suzanneFile;
-    //suzanneFile.Load("suzanne.obj");
-    suzanneFile.Load("cube.obj");
+    ObjFile objFile;
+    objFile.Load("hello.obj");
 
     //TODO: Refactor into the ObjFile class
-    //This seems janky, but it loads all of the coordinates into an array
-    auto vertCollection = suzanneFile.GetVertices();
+    //This is janky, but it loads all of the coordinates into an array
+    auto vertCollection = objFile.GetVertices();
 
     unsigned int vertCollectionSize = (vertCollection.size() * 3);
     GLfloat* pVertices;
@@ -67,14 +64,6 @@ int main(int argc, char* argv[])
         pVertices[index + 1] = vertCollection[i].y;
         pVertices[index + 2] = vertCollection[i].z;
     }
-
-    const float triangle[] =
-    {
-        // X    Y    Z
-        0.0f, 0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f,
-        -0.5f, -0.5f, 0.0f,
-    };
 
     //Creating Vertex Array Object
     GLuint vao;                 //Declare
@@ -93,87 +82,53 @@ int main(int argc, char* argv[])
     //      -GL_DYNAMIC_DRAW: Vertex data will be changes from time to time, but drawn many times more than changed
     //      -GL_STREAM_DRAW: Vertex data will change almost every time it's drawn (ex. user interface)
     //  These determine where in memory the data will be stored at, stream will allow faster writing for slower drawing
-    //  
-
-    /*
-    //Element Buffer
-    GLuint elements[] =
-    {
-        0, 1, 2,
-        2, 3, 4,
-        4, 0, 2,
-        //2, 3, 4,
-        //2, 3, 0,
-    };
-    */
+    //
 
     //Element Buffer
-    GLuint* elements;
+    GLuint* pElements;
 
-    auto faceCollection = suzanneFile.GetFaces();
+    auto faceCollection = objFile.GetFaces();
 
     unsigned int faceCollectionSize = (faceCollection.size() * 3);
-    elements = new GLuint[faceCollectionSize];
+    pElements = new GLuint[faceCollectionSize];
 
     for (unsigned int i = 0; i < faceCollection.size(); ++i)
     {
         unsigned int index = (i * 3);
-        elements[index] = faceCollection[i].indexX;
-        elements[index + 1] = faceCollection[i].indexY;
-        elements[index + 2] = faceCollection[i].indexZ;
+        pElements[index] = faceCollection[i].indexX;
+        pElements[index + 1] = faceCollection[i].indexY;
+        pElements[index + 2] = faceCollection[i].indexZ;
     }
 
+    const char* vertexShaderCode[] =
+    {
+        "#version 400\n", // This is the only line that requires a newline, all others do not need it!
+        "in vec3 vertex;",
+        "void main() {",
+        "  gl_Position = vec4(vertex, 1.0);",
+        "}",
+    };
+
+    const char* fragmentShaderCode[] =
+    {
+        "#version 400\n", // This is the only line that requires a newline, all others do not need it!
+        "out vec4 colorRGBA;",
+        "void main() {",
+        "  colorRGBA = vec4(1.0, 0.0, 0.0, 1.0);",
+        "}",
+    };
+
     //Same as creating a vertex buffer object
-    GLuint ebo;
-    glGenBuffers(1, &ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, faceCollectionSize, elements, GL_STATIC_DRAW);
+    GLuint elementBufferObject;
+    glGenBuffers(1, &elementBufferObject);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBufferObject);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, faceCollectionSize, pElements, GL_STATIC_DRAW);
 
-    //Now we have to explain to the graphics card how to handle these attributes.
-
-    //---------------------------------------------------------------------------------- -
-    //  Shaders
-    //---------------------------------------------------------------------------------- -
-    //  Vertex Shader
-    //  (optional)Geometry Shader
-    //  Fragment Shader
-
-    /*
-    const char* vertexSource[] = 
-    {
-        "#version 400\n", // This is the only line that requires a newline, all others do not need it!
-
-        "layout(location = 0) in vec2 position;",
-
-        "layout(location = 1) in vec3 inColor;",
-        "out vec3 xColor;"
-
-        "void main() {",
-        "  xColor = inColor;",
-        "  gl_Position = vec4(position, 0.0, 1.0);",
-        "}",
-    };
-
-    const char* fragmentSource[] =
-    {
-        "#version 400\n", // This is the only line that requires a newline, all others do not need it!
-
-        "uniform vec3 triangleColor;",
-
-        "in vec3 xColor;",
-        "out vec4 outColor;",
-
-        "void main() {",
-        //"  outColor = vec4(1.0, 1.0, 1.0, 1.0);",
-        //"  outColor = vec4(triangleColor, 1.0);",
-        "  outColor = vec4(xColor, 1.0);",
-        "}",
-    };
-    */
+    //explain to the graphics card how to handle these attributes.
 
     //Compile Vertex Shader
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexSource, NULL);
+    glShaderSource(vertexShader, 1, &vertexSource, nullptr);
     glCompileShader(vertexShader);
 
     //Error checking
@@ -183,49 +138,21 @@ int main(int argc, char* argv[])
 
     //Compile Fragment Shader
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
+    glShaderSource(fragmentShader, 1, &fragmentSource, nullptr);
     glCompileShader(fragmentShader);
 
     //Create & attach programs(shaders)
     GLuint shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
-    glBindFragDataLocation(shaderProgram, 0, "outColor");
+    //glBindFragDataLocation(shaderProgram, 0, "outColor");
     glLinkProgram(shaderProgram);
     glUseProgram(shaderProgram);
 
     //  Specify layout of the vertex data
     GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
     glEnableVertexAttribArray(posAttrib);
-    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
-    //glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), 0);
-
-    /*
-    GLint colAttrib = glGetAttribLocation(shaderProgram, "color");
-    glEnableVertexAttribArray(colAttrib);
-    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(2 * sizeof(float)));
-    */
-
-    //specify how input is retrieved from the array
-    
-    //  -'2' in the function above is the number of values for that input
-    //    2 in this case because of the vector 2
-    //  -The GL_FALSE says, that the input values should not be normalized -1 to 1
-    //  -The last two parameters specify how the attribute is laid out
-    //   inside of the vertex array, the first number is 'stride'
-    //   how many bytes are between each position attribute
-    //   -Last parameter isthe offset, or how many bytes from
-    //   The start of the array the attribute occurs
-    //    
-    //  Because we only have 1 attribute, both of these are zero
-    //
-    //  This function will store in addition to the stride and offset, the VBO
-    //  that is currently bound to GL_ARRAY_BUFFER. This means that you don't
-    //  have to explicitly bind the correct VBO when the actual drawing calls occur.
-    //  It also implies you can use a different VBO for each attribute <-??? still confusing
-
-    //Get location of the color attribute
-    //GLint uniColor = glGetUniformLocation(shaderProgram, "triangleColor");
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
     
     bool running = true;
     SDL_Event windowEvent;
@@ -244,14 +171,8 @@ int main(int argc, char* argv[])
         glClear(GL_COLOR_BUFFER_BIT);
         
         //Draw!
-        //glDrawArrays(GL_TRIANGLES, 0, 3);
-        //glDrawElements(GL_TRIANGLES, ARRAYSIZE(elements), GL_UNSIGNED_INT, 0);
-        glDrawElements(GL_TRIANGLES, faceCollectionSize, GL_UNSIGNED_INT, 0);
-
-        //Changing color attribute
-        //GLfloat newFloat = sinf((float)uniColor + (SDL_GetTicks() * 0.005f)) * 0.5f + 0.5f;
-        //glUniform3f(uniColor, newFloat, 0.0f, 0.0f);
-
+        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+        //glDrawElements(GL_TRIANGLES, faceCollectionSize, GL_UNSIGNED_INT, 0);
 
         SDL_GL_SwapWindow(pWindow);
     }
@@ -259,8 +180,8 @@ int main(int argc, char* argv[])
 
     //Cleanup
 
-    delete elements;
-    elements = nullptr;
+    delete pElements;
+    pElements = nullptr;
     delete pVertices;
     pVertices = nullptr;
 
@@ -268,7 +189,7 @@ int main(int argc, char* argv[])
     glDeleteShader(fragmentShader);
     glDeleteShader(vertexShader);
     
-    glDeleteBuffers(1, &ebo);
+    glDeleteBuffers(1, &elementBufferObject);
     glDeleteBuffers(1, &vbo);
     glDeleteVertexArrays(1, &vao);
 

@@ -121,7 +121,8 @@ void ObjFile::RetrieveFacesFromFile()
                 continue;
             }
 
-            unsigned int tempInt = (unsigned int)::atoi(tempIndexString.c_str());
+            //All of the indexes are 1-based, so need to subtract 1 from the end
+            unsigned int tempInt = ((unsigned int)::atoi(tempIndexString.c_str()) - 1);
 
             switch (currentIndex)
             {
@@ -148,15 +149,58 @@ void ObjFile::RetrieveFacesFromFile()
 
     }   //End of file
 
-    int debug = 0;
 }
 
-const std::vector<Vertex>& ObjFile::GetVertices() const
+//---------------------------------------------------------------------------- -
+//  Get Vertices Function
+//      -Returns the vertices in the form of structs.
+//---------------------------------------------------------------------------- -
+const std::vector<Vertex>& ObjFile::GetVerticesAsStructs() const
 {
-    return m_vertices;
+    return m_vertices;   
 }
 
-const std::vector<Face>& ObjFile::GetFaces() const
+//---------------------------------------------------------------------------- -
+//  Get Vertices Function
+//      -Returns the vertices in the form of floats.
+//---------------------------------------------------------------------------- -
+std::vector<float>& ObjFile::GetVerticesAsFloats()
+{
+    //Get the size and create an array from it
+    m_verticesAsFloats.resize(m_vertices.size() * 3);
+
+    for (unsigned int i = 0; i < m_vertices.size(); ++i)
+    {
+        unsigned int vertIndex = i * 3;
+        m_verticesAsFloats[vertIndex] = m_vertices[i].x;
+        m_verticesAsFloats[vertIndex + 1] = m_vertices[i].y;
+        m_verticesAsFloats[vertIndex + 2] = m_vertices[i].z;
+    }
+
+    return m_verticesAsFloats;
+}
+
+const std::vector<Face>& ObjFile::GetFacesAsStructs() const
 {
     return m_faces;
+}
+
+//---------------------------------------------------------------------------- -
+//  Get Faces Function
+//      -Returns the vertices in the form of floats.
+//---------------------------------------------------------------------------- -
+std::vector<unsigned int>& ObjFile::GetFacesAsIndices()
+{
+    //Get the size and create an array from it
+    m_facesAsIndices.resize(m_faces.size() * 3);
+
+    for (unsigned int i = 0; i < m_faces.size(); ++i)
+    {
+        unsigned int faceIndex = i * 3;
+        m_facesAsIndices[faceIndex] = m_faces[i].indexX;
+        m_facesAsIndices[faceIndex + 1] = m_faces[i].indexY;
+        m_facesAsIndices[faceIndex + 2] = m_faces[i].indexZ;
+    }
+
+    return m_facesAsIndices;
 }

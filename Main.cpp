@@ -1,25 +1,18 @@
 //Main.cpp
 
-#include <SDL.h>
-#include <gl\glew.h>
-#include <SDL_opengl.h>
-
+#include "SDLWrapper.h"
 #include "FileLoader.h"
 
 //Shader sources
 const GLchar* vertexSource =
 "#version 400\n"
-"in vec3 position;"
-//"in vec3 color;"
-//"out vec3 Color;"
+"layout (location = 0) in vec3 position;"
 "void main() {"
-//"    Color = color;"
 "    gl_Position = vec4(position, 1.0);"
 "}";
 
 const GLchar* fragmentSource =
 "#version 400\n"
-//"in vec3 Color;"
 "out vec4 outColor;"
 "void main() {"
 "    outColor = vec4(0.6, 0.6, 0.6, 0.6);"
@@ -27,43 +20,17 @@ const GLchar* fragmentSource =
 
 int main(int argc, char* argv[])
 {
+    //Init SDL & GLEW
+    SDLWrapper sdlWrapper;
+    sdlWrapper.Init();
 
-    SDL_Init(SDL_INIT_EVERYTHING);
-
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-
-    SDL_Window* pWindow = SDL_CreateWindow("OpenGL Homework"
-                                           , -1200, 300
-                                           , 800, 600
-                                           , SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
-
-    SDL_GLContext context = SDL_GL_CreateContext(pWindow);
-
-    //INIT GLEW
-    glewExperimental = GL_TRUE;
-    glewInit();
-    
-    //Load suzanne
+    //Load file
     ObjFile objFile;
     objFile.Load("hello.obj");
 
-    //TODO: Refactor into the ObjFile class
-    //This is janky, but it loads all of the coordinates into an array
-    auto vertCollection = objFile.GetVertices();
-
-    unsigned int vertCollectionSize = (vertCollection.size() * 3);
-    GLfloat* pVertices;
-    pVertices = new GLfloat[vertCollectionSize];
-
-    for (unsigned int i = 0; i < vertCollection.size(); ++i)
-    {
-        unsigned int index = (i * 3);
-        pVertices[index] = vertCollection[i].x;
-        pVertices[index + 1] = vertCollection[i].y;
-        pVertices[index + 2] = vertCollection[i].z;
-    }
+    //Get the address to the first element of the vertex collection
+    auto vertCollection = objFile.GetVerticesAsFloats();
+    GLfloat* pVertices = &vertCollection[0];
 
     //Creating Vertex Array Object
     GLuint vao;                 //Declare
@@ -74,8 +41,7 @@ int main(int argc, char* argv[])
     GLuint vbo;                         //Memory managed by openGL so this works in place of a pointer
     glGenBuffers(1, &vbo);              //Creating Vertex Buffer Object
     glBindBuffer(GL_ARRAY_BUFFER, vbo); //Making the vbo the active array buffer
-    //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);  //This copies the vertex data into the buffer
-    glBufferData(GL_ARRAY_BUFFER, vertCollectionSize, pVertices, GL_STATIC_DRAW);  //This copies the vertex data into the buffer
+    glBufferData(GL_ARRAY_BUFFER, vertCollection.size(), pVertices, GL_STREAM_DRAW);  //This copies the vertex data into the buffer
     //  NOTE: This function doesn't refer to the ID of the VBO, but to the active array buffer
     //  The last parameter can be 
     //      -GL_STATIC_DRAW: Vertex data uploaded once and drawn many times (ex. the world)
@@ -85,44 +51,14 @@ int main(int argc, char* argv[])
     //
 
     //Element Buffer
-    GLuint* pElements;
-
-    auto faceCollection = objFile.GetFaces();
-
-    unsigned int faceCollectionSize = (faceCollection.size() * 3);
-    pElements = new GLuint[faceCollectionSize];
-
-    for (unsigned int i = 0; i < faceCollection.size(); ++i)
-    {
-        unsigned int index = (i * 3);
-        pElements[index] = faceCollection[i].indexX;
-        pElements[index + 1] = faceCollection[i].indexY;
-        pElements[index + 2] = faceCollection[i].indexZ;
-    }
-
-    const char* vertexShaderCode[] =
-    {
-        "#version 400\n", // This is the only line that requires a newline, all others do not need it!
-        "in vec3 vertex;",
-        "void main() {",
-        "  gl_Position = vec4(vertex, 1.0);",
-        "}",
-    };
-
-    const char* fragmentShaderCode[] =
-    {
-        "#version 400\n", // This is the only line that requires a newline, all others do not need it!
-        "out vec4 colorRGBA;",
-        "void main() {",
-        "  colorRGBA = vec4(1.0, 0.0, 0.0, 1.0);",
-        "}",
-    };
+    auto faceCollection = objFile.GetFacesAsIndices();
+    GLuint* pElements = &faceCollection[0];
 
     //Same as creating a vertex buffer object
     GLuint elementBufferObject;
     glGenBuffers(1, &elementBufferObject);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBufferObject);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, faceCollectionSize, pElements, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, faceCollection.size(), pElements, GL_STATIC_DRAW);
 
     //explain to the graphics card how to handle these attributes.
 
@@ -132,8 +68,8 @@ int main(int argc, char* argv[])
     glCompileShader(vertexShader);
 
     //Error checking
-    //GLint status;
-    //glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+    GLint status;
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
     //True = good
 
     //Compile Fragment Shader
@@ -171,18 +107,13 @@ int main(int argc, char* argv[])
         glClear(GL_COLOR_BUFFER_BIT);
         
         //Draw
-        glDrawElements(GL_TRIANGLES, faceCollectionSize, GL_UNSIGNED_INT, 0);
-        //glDrawElements(GL_TRIANGLES, faceCollectionSize, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, faceCollection.size(), GL_UNSIGNED_INT, 0);
 
-        SDL_GL_SwapWindow(pWindow);
+        sdlWrapper.SwapWindow();
     }
 
-
     //Cleanup
-
-    delete pElements;
     pElements = nullptr;
-    delete pVertices;
     pVertices = nullptr;
 
     glDeleteProgram(shaderProgram);
@@ -193,8 +124,7 @@ int main(int argc, char* argv[])
     glDeleteBuffers(1, &vbo);
     glDeleteVertexArrays(1, &vao);
 
-    SDL_GL_DeleteContext(context);
-    SDL_Quit();
+    sdlWrapper.Shutdown();
 
     return 0;
 }

@@ -1,8 +1,13 @@
 //FileLoader.cpp
 
 #include "FileLoader.h"
+
 #include "Debug.h"
+#include "SDLWrapper.h"
+
 #include <fstream>
+
+
 
 bool ObjFile::Load(const char* fileName)
 {
@@ -88,6 +93,9 @@ void ObjFile::RetrieveVertsFromFile()
         m_vertices.push_back(tempVertex);
 
     }   //End of file
+
+    //Allocate verts into sequential collection
+    GetVerticesAsFloats();
 }
 
 void ObjFile::RetrieveFacesFromFile()
@@ -149,6 +157,38 @@ void ObjFile::RetrieveFacesFromFile()
 
     }   //End of file
 
+    //Allocate faces into sequential collection
+    GetFacesAsIndices();
+}
+
+void ObjFile::CreateVertexArrayObject()
+{
+    //Creating Vertex Array Object
+    glGenVertexArrays(1, &m_vertexArrayObject); //Create
+    glBindVertexArray(m_vertexArrayObject);     //Make active
+}
+
+void ObjFile::CreateVertexBufferObject()
+{
+    //Create Vertex Buffer Object
+    glGenBuffers(1, &m_vertexBufferObject);              //Creating Vertex Buffer Object
+    glBindBuffer(GL_ARRAY_BUFFER, m_vertexBufferObject); //Making the vbo the active array buffer
+    glBufferData(GL_ARRAY_BUFFER, m_verticesAsFloats.size(), &m_verticesAsFloats[0], GL_STATIC_DRAW);
+}
+
+void ObjFile::CreateElementBufferObject()
+{
+    //Create Element Buffer
+    glGenBuffers(1, &m_elementBufferObject);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_elementBufferObject);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_facesAsIndices.size(), &m_facesAsIndices[0], GL_STATIC_DRAW);
+}
+
+ObjFile::~ObjFile()
+{
+    glDeleteBuffers(1, &m_elementBufferObject);
+    glDeleteBuffers(1, &m_vertexBufferObject);
+    glDeleteVertexArrays(1, &m_vertexArrayObject);
 }
 
 //---------------------------------------------------------------------------- -

@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+
 struct Vertex
 {
     float x;
@@ -20,12 +21,19 @@ struct Face
     int indexZ;
 };
 
+typedef unsigned int GLuint;
+
 class ObjFile
 {
+
 private:
     std::string m_fileName;
     std::vector<Vertex> m_vertices;
     std::vector<Face> m_faces;
+
+    GLuint m_vertexArrayObject;
+    GLuint m_vertexBufferObject;
+    GLuint m_elementBufferObject;
 
     //[???] This is my solution to passing local variables
     //      I like this because the user doesn't have to free the memory
@@ -37,9 +45,15 @@ private:
     std::vector<unsigned int> m_facesAsIndices;
 
 public:
+    ~ObjFile();
+
     bool Load(const char* fileName);
     void RetrieveVertsFromFile();
     void RetrieveFacesFromFile();
+
+    void CreateVertexArrayObject();
+    void CreateVertexBufferObject();
+    void CreateElementBufferObject();
 
     //[???] I know there's no overloading for return values, but is there a better way to do this?
     //      templates seem like they could do it but would be unsafe
@@ -47,6 +61,8 @@ public:
     std::vector<float>& GetVerticesAsFloats();
     const std::vector<Face>& GetFacesAsStructs() const;
     std::vector<unsigned int>& ObjFile::GetFacesAsIndices();
+
+    unsigned int GetNumberOfIndices() const { return m_facesAsIndices.size(); }
 };
 
 class ShaderFile

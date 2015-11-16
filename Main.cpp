@@ -3,6 +3,10 @@
 #include "SDLWrapper.h"
 #include "FileLoader.h"
 
+#include <vld.h>
+
+#include <assert.h>
+
 bool PollEvents(SDL_Event& windowEvent);
 GLuint CompileShader(const GLchar* file, GLenum shaderType);
 GLuint CreateAndLinkProgram(GLuint shaders[], unsigned int length);
@@ -15,43 +19,29 @@ int main(int argc, char* argv[])
     sdlWrapper.Init();
 
     //Load file
-    ObjFile objFile;
-    objFile.Load("hello.obj");
+    const int k_numOfObjects = 3;
+    ObjFile objFiles[k_numOfObjects];
+    std::string objectsToLoad[k_numOfObjects] =
+    { 
+        "hello.obj",
+        "triangle.obj",
+        "quad.obj",
+    };
+
+    //Load all files in the array above
+    for (int i = 0; i < k_numOfObjects; ++i)
+    {
+        objFiles[i].Load(objectsToLoad[i].c_str());
+    }
 
     //Get the address to the first element of the vertex collection
-    auto vertCollection = objFile.GetVerticesAsFloats();
-    GLfloat* pVertices = &vertCollection[0];
-
-    //Creating Vertex Array Object
-    GLuint vao;                 //Declare
-    glGenVertexArrays(1, &vao); //Create
-    glBindVertexArray(vao);     //Make active
-
-    //Create Vertex Buffer Object
-    GLuint vbo;                         //Memory managed by openGL so this works in place of a pointer
-    glGenBuffers(1, &vbo);              //Creating Vertex Buffer Object
-    glBindBuffer(GL_ARRAY_BUFFER, vbo); //Making the vbo the active array buffer
-    glBufferData(GL_ARRAY_BUFFER, vertCollection.size(), pVertices, GL_STREAM_DRAW);  //This copies the vertex data into the buffer
-    //  NOTE: This function doesn't refer to the ID of the VBO, but to the active array buffer
-    //  The last parameter can be 
-    //      -GL_STATIC_DRAW: Vertex data uploaded once and drawn many times (ex. the world)
-    //      -GL_DYNAMIC_DRAW: Vertex data will be changes from time to time, but drawn many times more than changed
-    //      -GL_STREAM_DRAW: Vertex data will change almost every time it's drawn (ex. user interface)
-    //  These determine where in memory the data will be stored at, stream will allow faster writing for slower drawing
-    //
-
-    //Element Buffer
-    auto faceCollection = objFile.GetFacesAsIndices();
-    GLuint* pElements = &faceCollection[0];
-
-    //Same as creating a vertex buffer object
-    GLuint elementBufferObject;
-    glGenBuffers(1, &elementBufferObject);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBufferObject);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, faceCollection.size(), pElements, GL_STATIC_DRAW);
-
+    objFiles[0].CreateVertexArrayObject();
+    objFiles[0].CreateVertexBufferObject();
+    objFiles[0].CreateElementBufferObject();
+    
     //Explain to the graphics card how to handle these attributes.
 
+    //Load Shaders
     ShaderFile vertexSourceFile;
     vertexSourceFile.Load("VertexShader.glsl");
     ShaderFile fragmentSourceFile;
@@ -59,7 +49,6 @@ int main(int argc, char* argv[])
 
     //Create & Compile Vertex & Fragment Shader
     GLuint vertexShader = CompileShader(vertexSourceFile.GetSource(), GL_VERTEX_SHADER);
-    //GLuint vertexShader = CompileShader(string.c_str(), GL_VERTEX_SHADER);
     GLuint fragmentShader = CompileShader(fragmentSourceFile.GetSource(), GL_FRAGMENT_SHADER);
 
     //Create & attach programs(shaders)
@@ -81,22 +70,15 @@ int main(int argc, char* argv[])
         glClear(GL_COLOR_BUFFER_BIT);
         
         //Draw
-        glDrawElements(GL_TRIANGLES, faceCollection.size(), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, objFiles[0].GetNumberOfIndices(), GL_UNSIGNED_INT, 0);
 
         sdlWrapper.SwapWindow();
     }
 
     //Cleanup
-    pElements = nullptr;
-    pVertices = nullptr;
-
     glDeleteProgram(shaderProgram);
     glDeleteShader(fragmentShader);
     glDeleteShader(vertexShader);
-    
-    glDeleteBuffers(1, &elementBufferObject);
-    glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &vao);
 
     sdlWrapper.Shutdown();
 
@@ -133,6 +115,8 @@ GLuint CompileShader(const GLchar* file, GLenum shaderType)
     GLint status;
     glGetShaderiv(id, GL_COMPILE_STATUS, &status);
     //True = good
+
+    assert(status);
 
     return id;
 }

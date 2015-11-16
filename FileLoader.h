@@ -49,4 +49,18 @@ public:
     std::vector<unsigned int>& ObjFile::GetFacesAsIndices();
 };
 
+class ShaderFile
+{
+private:
+    std::string m_fileName;
+    std::string m_fileSource;
+
+public:
+    bool Load(const char* fileName);
+    const char* GetSource() const 
+    { 
+        return m_fileSource.c_str(); 
+    }
+};
+
 #endif // !FILELOADER_H

@@ -204,3 +204,34 @@ std::vector<unsigned int>& ObjFile::GetFacesAsIndices()
 
     return m_facesAsIndices;
 }
+
+bool ShaderFile::Load(const char* fileName)
+{
+    std::ifstream tempStream;
+    m_fileSource.clear();
+
+    tempStream.open(fileName);
+
+    //Error checking
+    if (!tempStream.is_open())
+    {
+        Debug::Log("File in ShaderFile::Load failed to open!");
+        return false;
+    }
+
+    std::string currentLine;
+
+    while (std::getline(tempStream, currentLine))
+    {
+        m_fileSource += currentLine + "\n";
+    }
+
+    m_fileName = fileName;
+
+    return true;
+}
+
+//const std::string ShaderFile::GetSource() const
+//{
+//    return m_fileSource;
+//}

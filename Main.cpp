@@ -3,20 +3,10 @@
 #include "SDLWrapper.h"
 #include "FileLoader.h"
 
-//Shader sources
-const GLchar* vertexSource =
-"#version 400\n"
-"layout (location = 0) in vec3 position;"
-"void main() {"
-"    gl_Position = vec4(position, 1.0);"
-"}";
-
-const GLchar* fragmentSource =
-"#version 400\n"
-"out vec4 outColor;"
-"void main() {"
-"    outColor = vec4(0.6, 0.6, 0.6, 0.6);"
-"}";
+bool PollEvents(SDL_Event& windowEvent);
+GLuint CompileShader(const GLchar* file, GLenum shaderType);
+GLuint CreateAndLinkProgram(GLuint shaders[], unsigned int length);
+void ToggleObj();
 
 int main(int argc, char* argv[])
 {
@@ -60,30 +50,21 @@ int main(int argc, char* argv[])
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBufferObject);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, faceCollection.size(), pElements, GL_STATIC_DRAW);
 
-    //explain to the graphics card how to handle these attributes.
+    //Explain to the graphics card how to handle these attributes.
 
-    //Compile Vertex Shader
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexSource, nullptr);
-    glCompileShader(vertexShader);
+    ShaderFile vertexSourceFile;
+    vertexSourceFile.Load("VertexShader.glsl");
+    ShaderFile fragmentSourceFile;
+    fragmentSourceFile.Load("FragmentShader.glsl");
 
-    //Error checking
-    GLint status;
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
-    //True = good
-
-    //Compile Fragment Shader
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentSource, nullptr);
-    glCompileShader(fragmentShader);
+    //Create & Compile Vertex & Fragment Shader
+    GLuint vertexShader = CompileShader(vertexSourceFile.GetSource(), GL_VERTEX_SHADER);
+    //GLuint vertexShader = CompileShader(string.c_str(), GL_VERTEX_SHADER);
+    GLuint fragmentShader = CompileShader(fragmentSourceFile.GetSource(), GL_FRAGMENT_SHADER);
 
     //Create & attach programs(shaders)
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    //glBindFragDataLocation(shaderProgram, 0, "outColor");
-    glLinkProgram(shaderProgram);
-    glUseProgram(shaderProgram);
+    GLuint shaders[] = { vertexShader, fragmentShader };
+    GLuint shaderProgram = CreateAndLinkProgram(shaders, 2);
 
     //  Specify layout of the vertex data
     GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
@@ -94,14 +75,7 @@ int main(int argc, char* argv[])
     SDL_Event windowEvent;
     while (running)
     {
-        while (SDL_PollEvent(&windowEvent))
-        {
-            if (windowEvent.type == SDL_QUIT || windowEvent.key.keysym.sym == SDLK_ESCAPE)
-            {
-                running = false;
-                break;
-            }
-        }
+        running = PollEvents(windowEvent);
 
         glClearColor(0.25f, 0.25f, 0.25f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -127,4 +101,61 @@ int main(int argc, char* argv[])
     sdlWrapper.Shutdown();
 
     return 0;
+}
+
+//Returns the GLuint identifier
+GLuint CreateAndLinkProgram(GLuint shaders[], unsigned int length)
+{
+    GLuint shaderProgram = glCreateProgram();
+
+    //Attach all shaders
+    for (unsigned int i = 0; i < length; ++i)
+    {
+        glAttachShader(shaderProgram, shaders[i]);
+    }
+
+    glLinkProgram(shaderProgram);
+    glUseProgram(shaderProgram); 
+
+    return shaderProgram;
+}
+
+//Returns the GLuint identifier
+GLuint CompileShader(const GLchar* file, GLenum shaderType)
+{
+    //Create shader
+    GLuint id = glCreateShader(shaderType);
+    //Compile Shader
+    glShaderSource(id, 1, &file, nullptr);
+    glCompileShader(id);
+
+    //Error checking
+    GLint status;
+    glGetShaderiv(id, GL_COMPILE_STATUS, &status);
+    //True = good
+
+    return id;
+}
+
+bool PollEvents(SDL_Event& windowEvent)
+{
+    while (SDL_PollEvent(&windowEvent))
+    {
+        if (windowEvent.type == SDL_QUIT || windowEvent.key.keysym.sym == SDLK_ESCAPE)
+        {
+            return false;
+        }
+
+        if (windowEvent.key.keysym.sym == SDLK_SPACE)
+        {
+            ToggleObj();
+        }
+    }
+
+    return true;
+}
+
+void ToggleObj()
+{
+
 }

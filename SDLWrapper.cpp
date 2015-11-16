@@ -25,6 +25,7 @@ void SDLWrapper::Init()
 void SDLWrapper::Shutdown()
 {
     SDL_GL_DeleteContext(m_context);
+    SDL_DestroyWindow(m_pWindow);
     SDL_Quit();
 }
 

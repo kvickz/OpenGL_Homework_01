@@ -63,6 +63,7 @@ public:
     std::vector<unsigned int>& ObjFile::GetFacesAsIndices();
 
     unsigned int GetNumberOfIndices() const { return m_facesAsIndices.size(); }
+    void* GetStartingIndexAddress() { return &m_facesAsIndices[0]; }
 };
 
 class ShaderFile

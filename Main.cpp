@@ -12,32 +12,48 @@ GLuint CompileShader(const GLchar* file, GLenum shaderType);
 GLuint CreateAndLinkProgram(GLuint shaders[], unsigned int length);
 void ToggleObj();
 
+const int k_numOfObjects = 1;
+unsigned int g_currentIndex = 0;
+
+void CheckGLError()
+{
+    GLenum error = glGetError();
+    if (error != 0)
+    {
+        SDL_Log("GL Error: %d %s", error, glewGetErrorString(error));
+        __debugbreak();
+    }
+}
+
 int main(int argc, char* argv[])
 {
     //Init SDL & GLEW
     SDLWrapper sdlWrapper;
     sdlWrapper.Init();
 
+    GLenum enumer = glGetError();
+
     //Load file
-    const int k_numOfObjects = 3;
     ObjFile objFiles[k_numOfObjects];
     std::string objectsToLoad[k_numOfObjects] =
     { 
-        "hello.obj",
-        "triangle.obj",
-        "quad.obj",
+        //"test.obj",
+        //"hello.obj",
+        "suzanne.obj",
+        //"triangle.obj",
+        //"quad.obj",
     };
 
     //Load all files in the array above
     for (int i = 0; i < k_numOfObjects; ++i)
     {
         objFiles[i].Load(objectsToLoad[i].c_str());
-    }
 
-    //Get the address to the first element of the vertex collection
-    objFiles[0].CreateVertexArrayObject();
-    objFiles[0].CreateVertexBufferObject();
-    objFiles[0].CreateElementBufferObject();
+        //Create VertexArray, VertexBuffer, and IndexBuffer Objects
+        objFiles[i].CreateVertexArrayObject();
+        objFiles[i].CreateVertexBufferObject();
+        objFiles[i].CreateElementBufferObject();
+    }
     
     //Explain to the graphics card how to handle these attributes.
 
@@ -59,7 +75,9 @@ int main(int argc, char* argv[])
     GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
     glEnableVertexAttribArray(posAttrib);
     glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    
+
+    CheckGLError();
+
     bool running = true;
     SDL_Event windowEvent;
     while (running)
@@ -70,7 +88,12 @@ int main(int argc, char* argv[])
         glClear(GL_COLOR_BUFFER_BIT);
         
         //Draw
-        glDrawElements(GL_TRIANGLES, objFiles[0].GetNumberOfIndices(), GL_UNSIGNED_INT, 0);
+        unsigned int byteOffset = 0;
+
+        if (g_currentIndex == 1)
+            byteOffset = objFiles[g_currentIndex].GetNumberOfIndices() * sizeof(float);
+
+        glDrawElements(GL_TRIANGLES, objFiles[g_currentIndex].GetNumberOfIndices(), GL_UNSIGNED_INT, 0);
 
         sdlWrapper.SwapWindow();
     }
@@ -141,5 +164,8 @@ bool PollEvents(SDL_Event& windowEvent)
 
 void ToggleObj()
 {
+    ++g_currentIndex;
 
+    if (g_currentIndex >= k_numOfObjects)
+        g_currentIndex = 0;
 }

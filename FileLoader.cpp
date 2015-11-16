@@ -95,7 +95,16 @@ void ObjFile::RetrieveVertsFromFile()
     }   //End of file
 
     //Allocate verts into sequential collection
-    GetVerticesAsFloats();
+    //Get the size and create an array from it
+    m_verticesAsFloats.resize(m_vertices.size() * 3);
+
+    for (unsigned int i = 0; i < m_vertices.size(); ++i)
+    {
+        unsigned int vertIndex = i * 3;
+        m_verticesAsFloats[vertIndex] = m_vertices[i].x;
+        m_verticesAsFloats[vertIndex + 1] = m_vertices[i].y;
+        m_verticesAsFloats[vertIndex + 2] = m_vertices[i].z;
+    }
 }
 
 void ObjFile::RetrieveFacesFromFile()
@@ -158,7 +167,16 @@ void ObjFile::RetrieveFacesFromFile()
     }   //End of file
 
     //Allocate faces into sequential collection
-    GetFacesAsIndices();
+    //Get the size and create an array from it
+    m_facesAsIndices.resize(m_faces.size() * 3);
+
+    for (unsigned int i = 0; i < m_faces.size(); ++i)
+    {
+        unsigned int faceIndex = i * 3;
+        m_facesAsIndices[faceIndex] = m_faces[i].indexX;
+        m_facesAsIndices[faceIndex + 1] = m_faces[i].indexY;
+        m_facesAsIndices[faceIndex + 2] = m_faces[i].indexZ;
+    }
 }
 
 void ObjFile::CreateVertexArrayObject()
@@ -173,7 +191,9 @@ void ObjFile::CreateVertexBufferObject()
     //Create Vertex Buffer Object
     glGenBuffers(1, &m_vertexBufferObject);              //Creating Vertex Buffer Object
     glBindBuffer(GL_ARRAY_BUFFER, m_vertexBufferObject); //Making the vbo the active array buffer
-    glBufferData(GL_ARRAY_BUFFER, m_verticesAsFloats.size(), &m_verticesAsFloats[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, m_verticesAsFloats.size() * sizeof(float), &m_verticesAsFloats[0], GL_STATIC_DRAW);
+
+    int thisngd = m_verticesAsFloats.size();
 }
 
 void ObjFile::CreateElementBufferObject()
@@ -181,7 +201,7 @@ void ObjFile::CreateElementBufferObject()
     //Create Element Buffer
     glGenBuffers(1, &m_elementBufferObject);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_elementBufferObject);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_facesAsIndices.size(), &m_facesAsIndices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_facesAsIndices.size() * sizeof(unsigned int), &m_facesAsIndices[0], GL_STATIC_DRAW);
 }
 
 ObjFile::~ObjFile()
@@ -206,17 +226,6 @@ const std::vector<Vertex>& ObjFile::GetVerticesAsStructs() const
 //---------------------------------------------------------------------------- -
 std::vector<float>& ObjFile::GetVerticesAsFloats()
 {
-    //Get the size and create an array from it
-    m_verticesAsFloats.resize(m_vertices.size() * 3);
-
-    for (unsigned int i = 0; i < m_vertices.size(); ++i)
-    {
-        unsigned int vertIndex = i * 3;
-        m_verticesAsFloats[vertIndex] = m_vertices[i].x;
-        m_verticesAsFloats[vertIndex + 1] = m_vertices[i].y;
-        m_verticesAsFloats[vertIndex + 2] = m_vertices[i].z;
-    }
-
     return m_verticesAsFloats;
 }
 
@@ -231,17 +240,6 @@ const std::vector<Face>& ObjFile::GetFacesAsStructs() const
 //---------------------------------------------------------------------------- -
 std::vector<unsigned int>& ObjFile::GetFacesAsIndices()
 {
-    //Get the size and create an array from it
-    m_facesAsIndices.resize(m_faces.size() * 3);
-
-    for (unsigned int i = 0; i < m_faces.size(); ++i)
-    {
-        unsigned int faceIndex = i * 3;
-        m_facesAsIndices[faceIndex] = m_faces[i].indexX;
-        m_facesAsIndices[faceIndex + 1] = m_faces[i].indexY;
-        m_facesAsIndices[faceIndex + 2] = m_faces[i].indexZ;
-    }
-
     return m_facesAsIndices;
 }
 
